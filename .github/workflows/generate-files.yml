@@ -1,0 +1,58 @@
+name: Generate files.json
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Generate files.json
+        run: |
+          python3 << 'EOF'
+          import os
+          import json
+
+          items = []
+
+          for file in sorted(os.listdir(".")):
+
+              if file.lower().endswith(".zip"):
+
+                  name = os.path.splitext(file)[0]
+                  image = name + ".png"
+
+                  item = {
+                      "name": name,
+                      "file": file
+                  }
+
+                  if os.path.exists(image):
+                      item["image"] = image
+
+                  items.append(item)
+
+          with open("files.json", "w", encoding="utf-8") as f:
+              json.dump(items, f, indent=2)
+
+          print("Generated files.json")
+          EOF
+
+      - name: Commit files.json
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@users.noreply.github.com
+
+          git add files.json
+
+          git diff --cached --quiet || git commit -m "Update files.json"
+
+          git push
